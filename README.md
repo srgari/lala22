@@ -41,6 +41,7 @@ lala22/
 ├── requirements.txt       # Python dependencies
 ├── Dockerfile             # Container image definition
 ├── docker-compose.yml     # Service orchestration
+├── .dockerignore          # Keeps venv and cache out of the image
 └── templates/
     └── index.html         # The entire frontend (one file, dark mode, clean)
 ```
@@ -66,7 +67,8 @@ The app is configured via environment variables:
 |---|---|---|
 | `TRANSMISSION_HOST` | `localhost` | Host where Transmission is running |
 | `TRANSMISSION_PORT` | `9091` | Transmission RPC port |
-| `DOWNLOAD_DIR` | `/mnt/usbdrive` | Where downloaded files go |
+
+> **Note on download directory:** Transmission's download folder is configured directly on the host machine (not via the app). On the Raspberry Pi, the default download directory will be set to `/mnt/usbdrive` in Transmission's own config.
 
 In `docker-compose.yml`, the container uses `network_mode: host` so it can reach a Transmission daemon running on the host machine directly.
 
@@ -77,6 +79,7 @@ In `docker-compose.yml`, the container uses `network_mode: host` so it can reach
 ### Prerequisites
 
 - Docker and Docker Compose installed
+- Your user added to the `docker` group (`sudo usermod -aG docker <user>`, then log out/in)
 - Transmission daemon running and accessible (port 9091)
 
 ### Start the container
@@ -85,7 +88,7 @@ In `docker-compose.yml`, the container uses `network_mode: host` so it can reach
 docker compose up --build
 ```
 
-The web interface will be available at `http://localhost:8000`.
+The `--build` flag ensures any code changes are picked up. The web interface will be available at `http://localhost:8000`.
 
 ### Development (without Docker)
 
@@ -98,9 +101,15 @@ uvicorn main:app --reload
 
 ## Target Deployment: Raspberry Pi 3
 
-The end goal is to run this on a Raspberry Pi 3 (`192.168.0.178`) connected to a USB drive mounted at `/mnt/usbdrive`. Transmission will run on the Pi, and downloads will go straight to the USB drive.
+The end goal is to run this on a Raspberry Pi 3 (`192.168.0.178`) connected to a USB drive mounted at `/mnt/usbdrive`. Transmission will run on the Pi with its default download directory configured to `/mnt/usbdrive`, and the Docker container will talk to it over localhost.
 
-**Status:** work in progress. Transmission integration needs to be sorted out first, then the container gets deployed to the Pi.
+---
+
+## Lessons Learned
+
+- `transmission_rpc` cannot reliably set a custom `download_dir` on Linux — Transmission ignores or rejects it due to permission constraints.
+- Editing `settings.json` directly also failed to redirect downloads on Linux Mint Cinnamon.
+- The working solution: let Transmission download to its default folder. On the Raspberry Pi (Raspberry Pi OS), the default folder will be configured to point to the USB drive — this is expected to work without the same restrictions.
 
 ---
 
@@ -108,8 +117,8 @@ The end goal is to run this on a Raspberry Pi 3 (`192.168.0.178`) connected to a
 
 - [x] FastAPI backend working
 - [x] Web UI built and looking decent
-- [x] Docker container defined
-- [ ] Transmission download confirmed working
+- [x] Docker container confirmed working
+- [x] Transmission download confirmed working (default folder)
 - [ ] Deployed and running on Raspberry Pi 3
 - [ ] Sergio has actually read all the code he asked Claude to write
 

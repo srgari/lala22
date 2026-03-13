@@ -10,9 +10,9 @@ templates = Jinja2Templates(directory="templates")
 TRANSMISSION_HOST = os.getenv("TRANSMISSION_HOST", "localhost")
 TRANSMISSION_PORT = int(os.getenv("TRANSMISSION_PORT", "9091"))
 # DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/mnt/usbdrive")
-DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/home/sergio/Downloads/torrents")
+# DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/home/sergio/Downloads/torrents")
 def get_client():
-    return Client(host=TRANSMISSION_HOST, port=TRANSMISSION_PORT)
+    return Client(host=TRANSMISSION_HOST, port=TRANSMISSION_PORT, username='sergio', password='a')
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -24,7 +24,8 @@ async def index(request: Request):
 async def add_torrent(link: str = Form(...)):
     try:
         client = get_client()
-        client.add_torrent(link, download_dir=DOWNLOAD_DIR)
+        # client.add_torrent(link, download_dir=DOWNLOAD_DIR)
+        client.add_torrent(link)
         return JSONResponse({"status": "ok", "message": "Torrent added successfully."})
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)

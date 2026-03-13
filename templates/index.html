@@ -246,6 +246,7 @@
       const input = document.getElementById('link-input');
       const link = input.value.trim();
       if (!link) return;
+      if (link === 'lala') { setMessage('you are not funny', 'err'); input.value = ''; return; }
 
       const form = new FormData();
       form.append('link', link);
