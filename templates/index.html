@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Torrent Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      color: #ffffff;
+    }
+
+    .add-form {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .add-form input {
+      flex: 1;
+      padding: 0.6rem 0.8rem;
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+    }
+
+    .add-form input:focus {
+      outline: none;
+      border-color: #555;
+    }
+
+    .add-form button {
+      padding: 0.6rem 1.2rem;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .add-form button:hover { background: #1d4ed8; }
+
+    #message {
+      font-size: 0.85rem;
+      margin-bottom: 1.2rem;
+      min-height: 1.2em;
+    }
+
+    .ok   { color: #4ade80; }
+    .err  { color: #f87171; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 0.5rem 0.8rem;
+      border-bottom: 1px solid #333;
+      color: #888;
+      font-weight: 500;
+    }
+
+    tbody tr:hover { background: #161616; }
+
+    tbody td {
+      padding: 0.55rem 0.8rem;
+      border-bottom: 1px solid #1e1e1e;
+      vertical-align: middle;
+    }
+
+    .progress-bar-bg {
+      background: #2a2a2a;
+      border-radius: 4px;
+      height: 6px;
+      width: 120px;
+    }
+
+    .progress-bar-fill {
+      background: #2563eb;
+      height: 6px;
+      border-radius: 4px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      text-transform: capitalize;
+      background: #1e1e1e;
+      color: #aaa;
+    }
+
+    .status-downloading { background: #1e3a5f; color: #60a5fa; }
+    .status-seeding     { background: #14532d; color: #4ade80; }
+    .status-stopped     { background: #292929; color: #888; }
+
+    .btn-remove {
+      background: none;
+      border: 1px solid #444;
+      color: #f87171;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    .btn-remove:hover { background: #2a1010; border-color: #f87171; }
+
+    #no-torrents {
+      color: #555;
+      font-size: 0.9rem;
+      padding: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Torrent Manager</h1>
+
+  <form class="add-form" id="add-form">
+    <input
+      type="text"
+      id="link-input"
+      placeholder="Paste magnet link or torrent URL..."
+      autocomplete="off"
+    />
+    <button type="submit">Add</button>
+  </form>
+
+  <div id="message"></div>
+
+  <table id="torrent-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Progress</th>
+        <th>Speed</th>
+        <th>Size</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="torrent-body">
+      <tr><td colspan="6" id="no-torrents">No torrents yet.</td></tr>
+    </tbody>
+  </table>
+
+  <script>
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '—';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let i = 0;
+      while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+      return bytes.toFixed(1) + ' ' + units[i];
+    }
+
+    function statusClass(status) {
+      if (status.includes('download')) return 'status-downloading';
+      if (status.includes('seed'))     return 'status-seeding';
+      return 'status-stopped';
+    }
+
+    function setMessage(text, type) {
+      const el = document.getElementById('message');
+      el.textContent = text;
+      el.className = type === 'ok' ? 'ok' : 'err';
+    }
+
+    async function fetchTorrents() {
+      try {
+        const res = await fetch('/torrents');
+        const data = await res.json();
+        if (data.status !== 'ok') return;
+
+        const tbody = document.getElementById('torrent-body');
+        tbody.innerHTML = '';
+
+        if (data.torrents.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" id="no-torrents">No torrents yet.</td></tr>';
+          return;
+        }
+
+        for (const t of data.torrents) {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td title="${t.name}">${t.name.length > 55 ? t.name.slice(0, 55) + '…' : t.name}</td>
+            <td><span class="status-badge ${statusClass(t.status)}">${t.status}</span></td>
+            <td>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width:${t.progress}%"></div>
+              </div>
+              <span style="font-size:0.78rem;color:#888;margin-top:2px;display:block">${t.progress}%</span>
+            </td>
+            <td>${formatBytes(t.download_speed)}/s</td>
+            <td>${formatBytes(t.size)}</td>
+            <td>
+              <button class="btn-remove" data-id="${t.id}">Remove</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        }
+
+        document.querySelectorAll('.btn-remove').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = parseInt(btn.dataset.id);
+            await removeTorrent(id);
+          });
+        });
+
+      } catch (e) {
+        console.error('Failed to fetch torrents:', e);
+      }
+    }
+
+    async function removeTorrent(id) {
+      try {
+        const res = await fetch(`/torrent/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.status === 'ok') fetchTorrents();
+        else setMessage(data.message, 'err');
+      } catch (e) {
+        setMessage('Failed to remove torrent.', 'err');
+      }
+    }
+
+    document.getElementById('add-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('link-input');
+      const link = input.value.trim();
+      if (!link) return;
+
+      const form = new FormData();
+      form.append('link', link);
+
+      try {
+        const res = await fetch('/add', { method: 'POST', body: form });
+        const data = await res.json();
+        setMessage(data.message, data.status);
+        if (data.status === 'ok') {
+          input.value = '';
+          fetchTorrents();
+        }
+      } catch (e) {
+        setMessage('Failed to contact server.', 'err');
+      }
+    });
+
+    fetchTorrents();
+    setInterval(fetchTorrents, 5000);
+  </script>
+
+</body>
+</html>

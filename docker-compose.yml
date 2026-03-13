@@ -1,0 +1,11 @@
+services:
+  torrent-manager:
+    build: .
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - TRANSMISSION_HOST=localhost
+      - TRANSMISSION_PORT=9091
+      - DOWNLOAD_DIR=/mnt/usbdrive
+    volumes:
+      - /mnt/usbdrive:/mnt/usbdrive
