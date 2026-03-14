@@ -12,7 +12,7 @@ TRANSMISSION_PORT = int(os.getenv("TRANSMISSION_PORT", "9091"))
 # DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/mnt/usbdrive")
 # DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/home/sergio/Downloads/torrents")
 def get_client():
-    return Client(host=TRANSMISSION_HOST, port=TRANSMISSION_PORT, username='sergio', password='a')
+    return Client(host=TRANSMISSION_HOST, port=TRANSMISSION_PORT)
 
 
 @app.get("/", response_class=HTMLResponse)
