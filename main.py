@@ -59,3 +59,16 @@ async def remove_torrent(torrent_id: int, delete_data: bool = False):
         return JSONResponse({"status": "ok", "message": "Torrent removed."})
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+@app.post("/restart-all")
+async def restart_all():
+    try:
+        client = get_client()
+        torrents = client.get_torrents()
+        ids = [t.id for t in torrents]
+        if ids:
+            client.start_torrent(ids)
+        return JSONResponse({"status": "ok", "message": f"Restarted {len(ids)} torrent(s)."})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
