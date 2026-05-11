@@ -124,6 +124,18 @@
 
     .btn-remove:hover { background: #2a1010; border-color: #f87171; }
 
+    .btn-refresh {
+      padding: 0.5rem 1rem;
+      background: none;
+      border: 1px solid #444;
+      color: #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      margin-bottom: 1rem;
+    }
+    .btn-refresh:hover { border-color: #888; color: #fff; }
+
     #no-torrents {
       color: #555;
       font-size: 0.9rem;
@@ -144,6 +156,8 @@
     />
     <button type="submit">Add</button>
   </form>
+
+  <button id="refresh-btn" class="btn-refresh">Refresh</button>
 
   <div id="message"></div>
 
@@ -263,6 +277,19 @@
         setMessage('Failed to contact server.', 'err');
       }
     });
+
+    async function restartAll() {
+      try {
+        const res = await fetch('/restart-all', { method: 'POST' });
+        const data = await res.json();
+        setMessage(data.message, data.status);
+        if (data.status === 'ok') fetchTorrents();
+      } catch (e) {
+        setMessage('Failed to contact server.', 'err');
+      }
+    }
+
+    document.getElementById('refresh-btn').addEventListener('click', restartAll);
 
     fetchTorrents();
     setInterval(fetchTorrents, 5000);
